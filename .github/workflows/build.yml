@@ -1,0 +1,80 @@
+name: Build ComplexClash
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Compile & Jar
+        run: |
+          javac scratch_8.java
+          echo "Main-Class: scratch_8" > MANIFEST.MF
+          echo "" >> MANIFEST.MF
+          jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
+      - name: Package DMG
+        run: |
+          jpackage --name ComplexClash --app-version 1.0 --input . --main-jar ComplexClash.jar --type dmg --dest dist
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComplexClash-mac-dmg
+          path: dist/*.dmg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Compile & Jar
+        shell: bash
+        run: |
+          javac scratch_8.java
+          echo "Main-Class: scratch_8" > MANIFEST.MF
+          echo "" >> MANIFEST.MF
+          jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
+      - name: Package app-image (runtime bundled)
+        shell: bash
+        run: |
+          jpackage --name ComplexClash --app-version 1.0 --input . --main-jar ComplexClash.jar --type app-image --dest dist
+          (cd dist && zip -r ComplexClash-windows-app-image.zip ComplexClash)
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComplexClash-windows-zip
+          path: dist/*.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Compile & Jar
+        run: |
+          javac scratch_8.java
+          echo "Main-Class: scratch_8" > MANIFEST.MF
+          echo "" >> MANIFEST.MF
+          jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
+      - name: Package app-image (runtime bundled)
+        run: |
+          jpackage --name ComplexClash --app-version 1.0 --input . --main-jar ComplexClash.jar --type app-image --dest dist
+          cd dist && tar -czf ComplexClash-linux-app-image.tar.gz ComplexClash
+      - name: Upload TAR.GZ
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComplexClash-linux
+          path: dist/*.tar.gz
