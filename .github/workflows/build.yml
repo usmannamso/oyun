@@ -1,4 +1,4 @@
-name: Build ComplexClash
+name: Build ComplexClash (Windows first)
 
 on:
   push:
@@ -9,36 +9,6 @@ env:
   JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
 
 jobs:
-  mac:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Compile (UTF-8) & Jar
-        run: |
-          set -e
-          javac -encoding UTF-8 scratch_8.java
-          echo "Main-Class: scratch_8" > MANIFEST.MF
-          jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
-      - name: Upload JAR (fallback)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ComplexClash-jar
-          path: ComplexClash.jar
-      - name: Package DMG with jpackage
-        run: |
-          jpackage --name ComplexClash --app-version 1.0 \
-                   --input . --main-jar ComplexClash.jar \
-                   --type dmg --dest dist
-      - name: Upload DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: ComplexClash-mac-dmg
-          path: dist/*.dmg
-
   windows:
     runs-on: windows-latest
     steps:
@@ -59,7 +29,7 @@ jobs:
         with:
           name: ComplexClash-jar
           path: ComplexClash.jar
-      - name: Package app-image (runtime bundled)
+      - name: Package app-image (jpackage, runtime bundled)
         shell: bash
         run: |
           jpackage --name ComplexClash --app-version 1.0 \
@@ -74,34 +44,3 @@ jobs:
         with:
           name: ComplexClash-windows-zip
           path: dist/ComplexClash-windows-app-image.zip
-
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Compile (UTF-8) & Jar
-        run: |
-          set -e
-          javac -encoding UTF-8 scratch_8.java
-          echo "Main-Class: scratch_8" > MANIFEST.MF
-          jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
-      - name: Upload JAR (fallback)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ComplexClash-jar
-          path: ComplexClash.jar
-      - name: Package app-image (runtime bundled)
-        run: |
-          jpackage --name ComplexClash --app-version 1.0 \
-                   --input . --main-jar ComplexClash.jar \
-                   --type app-image --dest dist
-          tar -czf dist/ComplexClash-linux-app-image.tar.gz -C dist ComplexClash
-      - name: Upload TAR.GZ
-        uses: actions/upload-artifact@v4
-        with:
-          name: ComplexClash-linux
-          path: dist/ComplexClash-linux-app-image.tar.gz
