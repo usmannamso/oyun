@@ -5,27 +5,34 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
+
 jobs:
   mac:
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Compile & Jar (UTF-8)
+      - name: Compile (UTF-8) & Jar
         run: |
           set -e
           javac -encoding UTF-8 scratch_8.java
           echo "Main-Class: scratch_8" > MANIFEST.MF
-          echo "" >> MANIFEST.MF
           jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
-      - name: Package DMG
+      - name: Upload JAR (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComplexClash-jar
+          path: ComplexClash.jar
+      - name: Package DMG with jpackage
         run: |
-          jpackage --name ComplexClash --app-version 1.0 --input . --main-jar ComplexClash.jar --type dmg --dest dist
+          jpackage --name ComplexClash --app-version 1.0 \
+                   --input . --main-jar ComplexClash.jar \
+                   --type dmg --dest dist
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
@@ -34,60 +41,67 @@ jobs:
 
   windows:
     runs-on: windows-latest
-    env:
-      JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Compile & Jar (UTF-8)
+      - name: Compile (UTF-8) & Jar
         shell: bash
         run: |
           set -e
           javac -encoding UTF-8 scratch_8.java
           echo "Main-Class: scratch_8" > MANIFEST.MF
-          echo "" >> MANIFEST.MF
           jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
+      - name: Upload JAR (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComplexClash-jar
+          path: ComplexClash.jar
       - name: Package app-image (runtime bundled)
         shell: bash
         run: |
-          jpackage --name ComplexClash --app-version 1.0 --input . --main-jar ComplexClash.jar --type app-image --dest dist
-          (cd dist && zip -r ComplexClash-windows-app-image.zip ComplexClash)
+          jpackage --name ComplexClash --app-version 1.0 \
+                   --input . --main-jar ComplexClash.jar \
+                   --type app-image --dest dist
+      - name: Zip app-image (PowerShell)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist/ComplexClash/*" -DestinationPath "dist/ComplexClash-windows-app-image.zip"
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
           name: ComplexClash-windows-zip
-          path: dist/*.zip
+          path: dist/ComplexClash-windows-app-image.zip
 
   linux:
     runs-on: ubuntu-latest
-    env:
-      JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Compile & Jar (UTF-8)
+      - name: Compile (UTF-8) & Jar
         run: |
           set -e
           javac -encoding UTF-8 scratch_8.java
           echo "Main-Class: scratch_8" > MANIFEST.MF
-          echo "" >> MANIFEST.MF
           jar cfm ComplexClash.jar MANIFEST.MF scratch_8*.class
+      - name: Upload JAR (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ComplexClash-jar
+          path: ComplexClash.jar
       - name: Package app-image (runtime bundled)
         run: |
-          jpackage --name ComplexClash --app-version 1.0 --input . --main-jar ComplexClash.jar --type app-image --dest dist
-          cd dist && tar -czf ComplexClash-linux-app-image.tar.gz ComplexClash
+          jpackage --name ComplexClash --app-version 1.0 \
+                   --input . --main-jar ComplexClash.jar \
+                   --type app-image --dest dist
+          tar -czf dist/ComplexClash-linux-app-image.tar.gz -C dist ComplexClash
       - name: Upload TAR.GZ
         uses: actions/upload-artifact@v4
         with:
           name: ComplexClash-linux
-          path: dist/*.tar.gz
+          path: dist/ComplexClash-linux-app-image.tar.gz
